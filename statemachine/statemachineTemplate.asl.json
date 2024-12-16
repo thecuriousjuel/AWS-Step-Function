@@ -1,0 +1,133 @@
+{
+  "Comment": "State Machine with conditional logic and parallel execution for regions",
+  "StartAt": "CheckRegionType",
+  "States": {
+    "CheckRegionType": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.region",
+          "IsString": true,
+          "Next": "CheckRegionString"
+        },
+        {
+          "Variable": "$.region.length",
+          "IsPresent": true,
+          "Next": "CheckRegionList"
+        }
+      ],
+      "Default": "InvalidRegionFormat"
+    },
+    "CheckRegionList": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            { "Variable": "$.region[0]", "StringEquals": "us-east-1" },
+            { "Variable": "$.region[1]", "StringEquals": "us-west-2" }
+          ],
+          "Next": "ExecuteBothFunctionsInParallel"
+        },
+        {
+          "And": [
+            { "Variable": "$.region[0]", "StringEquals": "us-west-2" },
+            { "Variable": "$.region[1]", "StringEquals": "us-east-1" }
+          ],
+          "Next": "ExecuteBothFunctionsInParallel"
+        },
+        {
+          "Variable": "$.region[0]",
+          "StringEquals": "us-east-1",
+          "Next": "ExecuteFunctionForUSEast"
+        },
+        {
+          "Variable": "$.region[0]",
+          "StringEquals": "us-west-2",
+          "Next": "ExecuteFunctionForUSWest"
+        }
+      ],
+      "Default": "InvalidParameters"
+    },
+    "CheckRegionString": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.region",
+          "StringEquals": "us-east-1",
+          "Next": "ExecuteFunctionForUSEast"
+        },
+        {
+          "Variable": "$.region",
+          "StringEquals": "us-west-2",
+          "Next": "ExecuteFunctionForUSWest"
+        }
+      ],
+      "Default": "InvalidParameters"
+    },
+    "ExecuteFunctionForUSEast": {
+      "Type": "Task",
+      "Resource": "${MyLambdaFunctionArn}",
+      "Parameters": {
+        "region": "us-east-1",
+        "operation": "operation_in_us_east_1"
+      },
+      "Next": "EndState"
+    },
+    "ExecuteFunctionForUSWest": {
+      "Type": "Task",
+      "Resource": "${MyLambdaFunctionArn}",
+      "Parameters": {
+        "region": "us-west-2",
+        "operation": "operation_in_us_west_2"
+      },
+      "Next": "EndState"
+    },
+    "ExecuteBothFunctionsInParallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "FunctionExecutionForUSEast",
+          "States": {
+            "FunctionExecutionForUSEast": {
+              "Type": "Task",
+              "Resource": "${MyLambdaFunctionArn}",
+              "Parameters": {
+                "region": "us-east-1",
+                "operation": "operation_in_us_east_1"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "FunctionExecutionForUSWest",
+          "States": {
+            "FunctionExecutionForUSWest": {
+              "Type": "Task",
+              "Resource": "${MyLambdaFunctionArn}",
+              "Parameters": {
+                "region": "us-west-2",
+                "operation": "operation_in_us_west_2"
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "EndState"
+    },
+    "InvalidRegionFormat": {
+      "Type": "Fail",
+      "Error": "InvalidRegionFormat",
+      "Cause": "The 'region' parameter must be a string or a list."
+    },
+    "InvalidParameters": {
+      "Type": "Fail",
+      "Error": "InvalidParameterError",
+      "Cause": "The input parameters are invalid. Expected regions: 'us-east-1' and/or 'us-west-2'."
+    },
+    "EndState": {
+      "Type": "Succeed"
+    }
+  }
+}

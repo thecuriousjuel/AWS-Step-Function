@@ -1,0 +1,16 @@
+# More information about the configuration file can be found here:
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+version = 0.1
+
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "stepfunction_test"
+capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAME_IAM"]
+confirm_changeset = true
+region = "us-east-1"
+disable_rollback = true
+resolve_s3 = true
+s3_bucket = "my-sam-artifacts-bucket"
+s3_prefix = "MyStateMachineApp"
+ 

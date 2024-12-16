@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+
+  MyLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Statemachine-test-lambda-function
+      Runtime: python3.12
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        ApiInvoke:
+          Type: Api
+          Properties:
+            Path: /execute
+            Method: GET
+
+  MyStateMachine:
+    DependsOn: MyLambdaFunction
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: Statemachine-test
+      Role: !GetAtt StepFunctionsExecutionRole.Arn
+      DefinitionUri: statemachine/statemachineTemplate.asl.json
+      DefinitionSubstitutions:
+        MyLambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:Statemachine-test-lambda-function
+
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionsExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
