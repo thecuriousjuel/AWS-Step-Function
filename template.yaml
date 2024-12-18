@@ -2,31 +2,47 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Resources:
 
-  MyLambdaFunction:
+  Application1:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: Statemachine-test-lambda-function
+      FunctionName: Statemachine-test-lambda-function-1
       Runtime: python3.12
-      CodeUri: src/
+      CodeUri: application_1/
       Handler: app.lambda_handler
       Policies:
         - AWSLambdaBasicExecutionRole
-      Events:
-        ApiInvoke:
-          Type: Api
-          Properties:
-            Path: /execute
-            Method: GET
+
+  Application2:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Statemachine-test-lambda-function-2
+      Runtime: python3.12
+      CodeUri: application_2/
+      Handler: app.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+
+  StarterApplication:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Statemachine-test-lambda-function-starter
+      Runtime: python3.12
+      CodeUri: starter/
+      Handler: app.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+  
 
   MyStateMachine:
-    DependsOn: MyLambdaFunction
     Type: AWS::Serverless::StateMachine
     Properties:
       Name: Statemachine-test
       Role: !GetAtt StepFunctionsExecutionRole.Arn
       DefinitionUri: statemachine/statemachineTemplate.asl.json
       DefinitionSubstitutions:
-        MyLambdaFunctionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:Statemachine-test-lambda-function
+        StarterFunction: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:Statemachine-test-lambda-function-starter
+        Application1: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:Statemachine-test-lambda-function-1
+        Application2: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:Statemachine-test-lambda-function-2
 
   StepFunctionsExecutionRole:
     Type: AWS::IAM::Role
@@ -40,6 +56,7 @@ Resources:
                 - states.amazonaws.com
             Action:
               - sts:AssumeRole
+
       Policies:
         - PolicyName: StepFunctionsExecutionPolicy
           PolicyDocument:

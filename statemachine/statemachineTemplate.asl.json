@@ -1,22 +1,12 @@
 {
   "Comment": "State Machine with conditional logic and parallel execution for regions",
-  "StartAt": "CheckRegionType",
+  "StartAt": "DetermineRegionType",
   "States": {
-    "CheckRegionType": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.region",
-          "IsString": true,
-          "Next": "CheckRegionString"
-        },
-        {
-          "Variable": "$.region.length",
-          "IsPresent": true,
-          "Next": "CheckRegionList"
-        }
-      ],
-      "Default": "InvalidRegionFormat"
+    "DetermineRegionType": {
+      "Type": "Task",
+      "Resource": "${StarterFunction}",
+      "ResultPath": "$.starterResponse",
+      "Next": "CheckRegionList"
     },
     "CheckRegionList": {
       "Type": "Choice",
@@ -38,12 +28,12 @@
         {
           "Variable": "$.region[0]",
           "StringEquals": "us-east-1",
-          "Next": "ExecuteFunctionForUSEast"
+          "Next": "DetermineApplication"
         },
         {
           "Variable": "$.region[0]",
           "StringEquals": "us-west-2",
-          "Next": "ExecuteFunctionForUSWest"
+          "Next": "DetermineApplication"
         }
       ],
       "Default": "InvalidParameters"
@@ -54,28 +44,43 @@
         {
           "Variable": "$.region",
           "StringEquals": "us-east-1",
-          "Next": "ExecuteFunctionForUSEast"
+          "Next": "DetermineApplication"
         },
         {
           "Variable": "$.region",
           "StringEquals": "us-west-2",
-          "Next": "ExecuteFunctionForUSWest"
+          "Next": "DetermineApplication"
         }
-      ],
+      ],  
       "Default": "InvalidParameters"
     },
-    "ExecuteFunctionForUSEast": {
+    "DetermineApplication":{
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.starterResponse.runApplication1",
+          "BooleanEquals": true,
+          "Next": "RunApplication1"
+        },
+        {
+          "Variable": "$.starterResponse.runApplication2",
+          "BooleanEquals": true,
+          "Next": "RunApplication2"
+        }
+      ]
+    },
+    "RunApplication1": {
       "Type": "Task",
-      "Resource": "${MyLambdaFunctionArn}",
+      "Resource": "${Application1}",
       "Parameters": {
         "region": "us-east-1",
         "operation": "operation_in_us_east_1"
       },
       "Next": "EndState"
     },
-    "ExecuteFunctionForUSWest": {
+    "RunApplication2": {
       "Type": "Task",
-      "Resource": "${MyLambdaFunctionArn}",
+      "Resource": "${Application2}",
       "Parameters": {
         "region": "us-west-2",
         "operation": "operation_in_us_west_2"
@@ -90,7 +95,7 @@
           "States": {
             "FunctionExecutionForUSEast": {
               "Type": "Task",
-              "Resource": "${MyLambdaFunctionArn}",
+              "Resource": "${Application1}",
               "Parameters": {
                 "region": "us-east-1",
                 "operation": "operation_in_us_east_1"
@@ -104,7 +109,7 @@
           "States": {
             "FunctionExecutionForUSWest": {
               "Type": "Task",
-              "Resource": "${MyLambdaFunctionArn}",
+              "Resource": "${Application2}",
               "Parameters": {
                 "region": "us-west-2",
                 "operation": "operation_in_us_west_2"
